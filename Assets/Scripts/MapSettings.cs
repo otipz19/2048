@@ -7,7 +7,7 @@ public struct MapSettings
     public float Margin { get; private set; }
     public Vector2 StartCoordinates { get; private set; }
 
-    public MapSettings(int height, int width, Vector2 startCoordinates, float margin)
+    public MapSettings(int width, int height, Vector2 startCoordinates, float margin)
     {
         Height = height;
         Width = width;
@@ -15,4 +15,3 @@ public struct MapSettings
         StartCoordinates = startCoordinates;
     }
 }
-

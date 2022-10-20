@@ -3,10 +3,22 @@ using UnityEngine;
 
 public class Tile : MonoBehaviour
 {
-    private Vector2 mapCoords;
     [SerializeField]
     private TextMeshPro ValueUI;
-    private bool isAddingUp;
+
+    public bool IsMoving { get; private set; }
+    private Vector2 startPos;
+    private Vector2 targetPos;
+    private float moveDuration;
+    private float moveStartTime;
+
+    public Slot SlotToResponse { get; set; }
+
+    public bool IsAppearing { get; private set; }
+    private Vector3 startScale;
+    private Vector3 targetScale;
+    private float appearDuration;
+    private float appearStartTime;
 
     public int Value
     {
@@ -14,72 +26,80 @@ public class Tile : MonoBehaviour
         set { ValueUI.text = value.ToString(); }
     }
 
-    public void Place(Vector2 mapCoords)
+    private void Awake()
     {
-        this.mapCoords = mapCoords;
-        Vector2 sceneCoords = Game.S.Map.MapToSceneCoords(mapCoords);
+        StartAppear(Vector3.zero, Vector3.one, 0.2f);
+    }
+
+    private void Update()
+    {
+        if (IsMoving)
+        {
+            Move();
+        }
+        if (IsAppearing)
+        {
+            Appear();
+        }
+    }
+
+    public void Place(Vector2 sceneCoords)
+    {
         transform.position = sceneCoords;
     }
 
-    public void Move(MoveDirection moveDirection)
+    public void StartMove(Vector2 targetPos, float speed)
     {
-        Vector2 offsetCoords = Vector2.zero;
-        switch (moveDirection)
-        {
-            case MoveDirection.Up:
-                offsetCoords = new Vector2(0, -1);
-                break;
-            case MoveDirection.Down:
-                offsetCoords = new Vector2(0, 1);
-                break;
-            case MoveDirection.Left:
-                offsetCoords = new Vector2(-1, 0);
-                break;
-            case MoveDirection.Right:
-                offsetCoords = new Vector2(1, 0);
-                break;
-        }
-        Vector2 tracedMapCoords = TraceDirection(offsetCoords);
-        if (!isAddingUp)
-        {
-            Game.S.Map.Slots[(int)mapCoords.x, (int)mapCoords.y].Tile = null;
-            mapCoords = tracedMapCoords;
-            Game.S.Map.Slots[(int)mapCoords.x, (int)mapCoords.y].Tile = this;
-        }
-        Place(mapCoords = tracedMapCoords);
+        if (Mathf.Approximately(0, Vector3.Distance(targetPos, transform.position)))
+            return;
+
+        Game.S.Map.TileStartedMoving();
+        IsMoving = true;
+        this.targetPos = targetPos;
+        startPos = transform.position;
+        moveDuration = Vector3.Distance(targetPos, transform.position) / speed;
+        moveStartTime = Time.time;
     }
-    
-    private Vector2 TraceDirection(Vector2 offset)
+
+    private void Move()
     {
-        Vector2 tracedCoords = mapCoords;
-        while(true)
+        float u = EaseInterpolation((Time.time - moveStartTime) / moveDuration);
+        if (u >= 1)
         {
-            Vector2 newCoords = tracedCoords + offset;
-            if (newCoords.x < Game.S.Map.MapSettings.Width && newCoords.x >= 0 &&
-                newCoords.y < Game.S.Map.MapSettings.Height && newCoords.y >= 0)
-            {
-                if(Game.S.Map.Slots[(int)newCoords.x, (int)newCoords.y].Tile == null)
-                {
-                    tracedCoords = newCoords;
-                }
-                else if (Game.S.Map.Slots[(int)newCoords.x, (int)newCoords.y].Tile.Value == this.Value &&
-                         !Game.S.Map.Slots[(int)newCoords.x, (int)newCoords.y].IsAddingUp)
-                {
-                    tracedCoords = newCoords;
-                    Game.S.Map.Slots[(int)newCoords.x, (int)newCoords.y].StartAddUp(this);
-                    isAddingUp = true;
-                    return tracedCoords;
-                }
-                else
-                {
-                    break;
-                }
-            }
-            else
-            {
-                break;
-            } 
+            u = 1;
+            IsMoving = false;
+            Game.S.Map.TileStoppedMoving();
         }
-        return tracedCoords;
+        transform.position = Vector2.Lerp(startPos, targetPos, u);
+        if (u == 1 && SlotToResponse != null)
+        {
+            SlotToResponse.CheckAddUp();
+            Destroy(this.gameObject);
+        }
+    }
+
+    private void StartAppear(Vector3 startScale, Vector3 targetScale, float duration)
+    {
+        IsAppearing = true;
+        this.startScale = startScale;
+        this.targetScale = targetScale;
+        appearStartTime = Time.time;
+        appearDuration = duration;
+    }
+
+    private void Appear()
+    {
+        float u = EaseInterpolation((Time.time - appearStartTime) / appearDuration);
+        if(u >= 1)
+        {
+            u = 1;
+            IsAppearing = false;
+        }
+        transform.localScale = Vector3.Lerp(startScale, targetScale, u);
+    }
+
+    private float EaseInterpolation(float u)
+    {
+        return 1 - Mathf.Pow(1 - u, 3);
     }
 }
