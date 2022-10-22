@@ -19,26 +19,63 @@ public class Game : MonoBehaviour
     [SerializeField]
     private GameObject tilePrefab;
     public GameObject TilePrefab => tilePrefab;
-
-    public const float TileSpeed = 10f;
-
-    //This should be put into player's settings then
-    public readonly MapSettings Map4X4 = new MapSettings(4, 4, new Vector2(-2, 2), 1.33f);
-
     [SerializeField]
+    private GameObject emptySlotPrefab;
+    public GameObject EmptySlotPrefab => emptySlotPrefab;
+
+    public Color[] TileColors;
+
+    public const float TileSpeed = 15f;
+
     private bool isInputBlocked;
 
     private Vector2 touchStartPos;
 
+    [SerializeField]
+    private GameObject background;
+    [SerializeField]
+    private GameObject[] buttons;
+    [SerializeField]
+    private GameObject title;
+    [SerializeField]
+    private GameObject[] scoreLabels;
+    [SerializeField]
+    private GameObject gameWonBox;
+
     private void Awake()
     {
         S = this;
-        Map = new Map(Map4X4);
+        Map = new Map(Settings.SelectedMapSettings);
     }
 
     private void Start()
     {
-        Map.AddTiles(2);
+        if(Map.MapSettings.Width != Map.MapSettings.Height)
+        {
+            Vector3 backgroundScale = background.transform.localScale;
+            backgroundScale.y = Map.MapSettings.TilesScale * Map.MapSettings.Height + (Map.MapSettings.Margin - Map.MapSettings.TilesScale) * (Map.MapSettings.Height + 1);
+            background.transform.localScale = backgroundScale;
+
+            title.SetActive(false);
+
+            float yOffset = (backgroundScale.y - backgroundScale.x) / 2;
+            foreach (GameObject button in buttons)
+            {
+                Vector3 pos = Camera.main.ScreenToWorldPoint(button.transform.position);
+                pos.y += yOffset;
+                button.transform.position = Camera.main.WorldToScreenPoint(pos);
+            }
+
+            scoreLabels[0].transform.localPosition = new Vector3(-90, -220, 0);
+            scoreLabels[1].transform.localPosition = new Vector3(85, -220, 0);
+
+            Map.TilesYOffset = yOffset;
+        }
+
+        Map.Start();
+
+        if(!Map.SaveLoadedSuccesfully)
+            Map.AddTiles(2);
     }
 
     private void Update()
@@ -57,7 +94,43 @@ public class Game : MonoBehaviour
         isInputBlocked = true;
        
         if (Map.Count == Map.MapSettings.Height * Map.MapSettings.Width)
-            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        {
+            EndGame();
+        }
+    }
+
+    private void EndGame()
+    {
+        Map.GameHasEnded();
+        PlayerScore.S.UpdateRecord();
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+    private void OnDestroy()
+    {
+        Map.SerializeMapData();
+    }
+
+    public void OnMenuClicked()
+    {
+        SceneManager.LoadScene("Menu");
+    }
+
+    public void OnBackClicked()
+    {
+        if(!isInputBlocked)
+            Map.LoadPreviousTurn();
+    }
+
+    public void OnRestartClicked()
+    {
+        EndGame();
+    }
+
+    public void GameWon()
+    {
+        gameWonBox.SetActive(true);
+        gameWonBox.transform.localScale = background.transform.localScale;
     }
 
     //For desktop

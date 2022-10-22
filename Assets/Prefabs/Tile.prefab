@@ -211,12 +211,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 200
+  m_fontSize: 250
   m_fontSizeBase: 200
   m_fontWeight: 400
-  m_enableAutoSizing: 0
-  m_fontSizeMin: 18
-  m_fontSizeMax: 72
+  m_enableAutoSizing: 1
+  m_fontSizeMin: 100
+  m_fontSizeMax: 250
   m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
@@ -302,4 +302,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fca37c00fb3888b419f2f391b02683f7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ValueUI: {fileID: 1770127701119834291}
+  valueUI: {fileID: 1770127701119834291}
+  backgroundRenderer: {fileID: 8092337396938409613}
